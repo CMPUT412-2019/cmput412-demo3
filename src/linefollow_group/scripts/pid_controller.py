@@ -36,7 +36,7 @@ class Main:
         self.linear_error_subscriber = rospy.Subscriber('linear_error', Float64, self.linear_error_callback)
         self.twist_publisher = rospy.Publisher('cmd_vel_mux/input/teleop', Twist, queue_size=1)
 
-        self.angle_controller = PIDController(kp=1./100, ki=1./100000, kd=1./100000)
+        self.angle_controller = PIDController(kp=1./500, ki=1./100000, kd=1./100000)
         self.linear_controller = PIDController(kp=1., ki=0., kd=0.)
 
         self.rate = rospy.Rate(10)

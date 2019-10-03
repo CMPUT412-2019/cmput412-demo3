@@ -16,7 +16,7 @@ import time
 
 
 class StopState(State):
-    def __init__(self, delay_time=1):
+    def __init__(self, delay_time=.5):
         State.__init__(self, outcomes=['ok'])
         self.delay_time = delay_time
         self.rate = rospy.Rate(10)
@@ -81,10 +81,11 @@ class LineFollowState(State):
         stop_mask = self.stop_filter(hsv) & eye_mask
 
         # Check for stopping condition
-        if self.saw_stopline and self.is_mask_empty(stop_mask):
+        stop_mask_empty = np.sum(stop_mask) < 50
+        if self.saw_stopline and stop_mask_empty:
             raise self.StopError()
         else:
-            self.saw_stopline = not self.is_mask_empty(stop_mask)
+            self.saw_stopline = not stop_mask_empty
 
         # Line following
         if not self.is_mask_empty(line_mask):
@@ -93,19 +94,19 @@ class LineFollowState(State):
             err = cx - image.shape[1] / 2
 
             self.linear_error_pub.publish(-self.forward_speed)
-            self.angle_error_pub.publish(err)
+            self.angle_error_pub.publish(-err)
 
         # Display
         cv2.imshow('main_camera', image)
-        cv2.imshow('line_mask', line_mask * 255)
+        cv2.imshow('line_mask',line_mask * 255)
         cv2.imshow('stop_mask', stop_mask * 255)
         cv2.waitKey(3)
 
     @staticmethod
     def get_eye_mask(image):
         h, w, d = image.shape
-        search_top = 3 * h / 4
-        search_bot = 3 * h / 4 + 20
+        search_top = 1 * h / 4 - 20
+        search_bot = 1 * h / 4
         eye_mask = np.ones((h, w), dtype=bool)
         eye_mask[0:search_top, 0:w] = False
         eye_mask[search_bot:h, 0:w] = False
@@ -132,11 +133,20 @@ def make_course2_follow_state():
     )
 
 
+def make_realcourse_follow_state():
+    return LineFollowState(
+        forward_speed=0.8,
+        line_filter=lambda hsv: cv2.inRange(hsv, np.array([0,  0,  225]), np.array([255, 50, 255])),
+        stop_filter=lambda hsv: cv2.inRange(hsv, np.asarray([0, 70, 50]), np.asarray([10, 255, 250])) |
+                                cv2.inRange(hsv, np.asarray([170, 70, 50]), np.asarray([180, 255, 250]))
+    )
+
+
 rospy.init_node('follower')
 
 sm = StateMachine(outcomes=['ok', 'stop'])
 with sm:
-    StateMachine.add('FOLLOW', make_course2_follow_state(), transitions={'stop': 'STOP'})
+    StateMachine.add('FOLLOW', make_realcourse_follow_state(), transitions={'stop': 'STOP'})
     StateMachine.add('STOP', StopState(), transitions={'ok': 'FOLLOW'})
 
 sis = IntrospectionServer('smach_server', sm, '/SM_ROOT')
