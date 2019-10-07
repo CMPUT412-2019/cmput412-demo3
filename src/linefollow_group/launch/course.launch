@@ -33,5 +33,5 @@
   </node>
   -->
 
-  <node pkg="linefollow_group" type="pid_controller.py" name="pid_controller" output="screen"></node>
+  <!-- <node pkg="linefollow_group" type="pid_controller.py" name="pid_controller" output="screen"></node> -->
 </launch>

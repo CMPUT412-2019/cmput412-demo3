@@ -1,0 +1,4 @@
+<launch>
+    <include file="$(find turtlebot_bringup)/launch/minimal.launch"></include>
+    <include file="$(find openni2_launch)/launch/openni2.launch"></include>
+</launch>

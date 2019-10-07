@@ -12,9 +12,6 @@ import numpy as np
 import time
 
 
-
-
-
 class StopState(State):
     def __init__(self, delay_time=.5):
         State.__init__(self, outcomes=['ok'])
@@ -78,10 +75,10 @@ class LineFollowState(State):
 
         eye_mask = self.get_eye_mask(hsv)
         line_mask = self.line_filter(hsv) & eye_mask
-        stop_mask = self.stop_filter(hsv) & eye_mask
+        stop_mask = self.stop_filter(hsv) & self.get_stop_eye_mask(hsv)
 
         # Check for stopping condition
-        stop_mask_empty = np.sum(stop_mask) < 50
+        stop_mask_empty = np.sum(stop_mask) < 300
         if self.saw_stopline and stop_mask_empty:
             raise self.StopError()
         else:
@@ -107,6 +104,16 @@ class LineFollowState(State):
         h, w, d = image.shape
         search_top = 1 * h / 4 - 20
         search_bot = 1 * h / 4
+        eye_mask = np.ones((h, w), dtype=bool)
+        #eye_mask[0:search_top, 0:w] = False
+        eye_mask[search_bot:h, 0:w] = False
+        return eye_mask
+
+    @staticmethod
+    def get_stop_eye_mask(image):
+        h, w, d = image.shape
+        search_top = int(1.5 * h / 4 - 20)
+        search_bot = int(1.5 * h / 4)
         eye_mask = np.ones((h, w), dtype=bool)
         eye_mask[0:search_top, 0:w] = False
         eye_mask[search_bot:h, 0:w] = False
